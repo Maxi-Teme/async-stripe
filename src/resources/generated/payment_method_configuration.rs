@@ -8,6 +8,8 @@ use crate::params::{Expand, List, Object, Paginable};
 use serde::{Deserialize, Serialize};
 
 /// The resource representing a Stripe "PaymentMethodConfigResourcePaymentMethodConfiguration".
+///
+/// For more details see <https://stripe.com/docs/api/payment_method_configurations/object>
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PaymentMethodConfiguration {
     /// Unique identifier for the object.

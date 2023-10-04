@@ -1280,7 +1280,11 @@ pub fn gen_field_rust_type<T: Borrow<Schema>>(
         return "bool".into();
     }
     if ty.contains("List<") {
-        // N.B. return immediately; we use `Default` for list rather than `Option`
+        // If not default and is_nullable return Option
+        if !default && is_nullable {
+            return format!("Option<{}>", ty);
+        }
+        // else prefer using `Default` for list rather than `Option`
         return ty;
     }
 
