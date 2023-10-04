@@ -16,6 +16,18 @@ impl CancelSubscription {
     }
 }
 
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct ResumeSubscription {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_cycle_anchor: Option<String>,
+}
+
+impl ResumeSubscription {
+    pub fn new() -> ResumeSubscription {
+        ResumeSubscription { billing_cycle_anchor: None }
+    }
+}
+
 impl Subscription {
     /// Cancels a subscription.
     ///
@@ -26,6 +38,17 @@ impl Subscription {
         params: CancelSubscription,
     ) -> Response<Subscription> {
         client.delete_query(&format!("/subscriptions/{}", subscription_id), params)
+    }
+
+    /// Resumes a canceled subscription.
+    ///
+    /// For more details see <https://stripe.com/docs/api/subscriptions/resume>.
+    pub fn resume(
+        client: &Client,
+        subscription_id: &SubscriptionId,
+        params: ResumeSubscription,
+    ) -> Response<Subscription> {
+        client.post_form(&format!("/subscriptions/{}/resume", subscription_id), params)
     }
 }
 
