@@ -10,7 +10,8 @@ use crate::params::{Expand, Expandable, List, Metadata, Object, Paginable, Range
 use crate::resources::{
     Account, ApiErrors, Application, Currency, Customer, LinkedAccountOptionsUsBankAccount,
     Mandate, PaymentIntentNextActionCashappHandleRedirectOrDisplayQrCode, PaymentMethod,
-    PaymentMethodConfigBizPaymentMethodConfigurationDetails, SetupAttempt,
+    PaymentMethodConfigBizPaymentMethodConfigurationDetails,
+    PaymentMethodOptionsUsBankAccountMandateOptions, SetupAttempt,
 };
 
 /// The resource representing a Stripe "SetupIntent".
@@ -97,11 +98,10 @@ pub struct SetupIntent {
     pub payment_method: Option<Expandable<PaymentMethod>>,
 
     /// Information about the payment method configuration used for this Setup Intent.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_configuration_details:
         Option<PaymentMethodConfigBizPaymentMethodConfigurationDetails>,
 
-    /// Payment-method-specific configuration for this SetupIntent.
+    /// Payment method-specific configuration for this SetupIntent.
     pub payment_method_options: Option<SetupIntentPaymentMethodOptions>,
 
     /// The list of payment method types (e.g.
@@ -127,14 +127,15 @@ pub struct SetupIntent {
 impl SetupIntent {
     /// Returns a list of SetupIntents.
     pub fn list(client: &Client, params: &ListSetupIntents<'_>) -> Response<List<SetupIntent>> {
-        client.get_query("/setup_intents", &params)
+        client.get_query("/setup_intents", params)
     }
 
     /// Creates a SetupIntent object.
     ///
-    /// After the SetupIntent is created, attach a payment method and [confirm](https://stripe.com/docs/api/setup_intents/confirm)
-    /// to collect any required permissions to charge the payment method later.
+    /// After you create the SetupIntent, attach a payment method and [confirm](https://stripe.com/docs/api/setup_intents/confirm)
+    /// it to collect any required permissions to charge the payment method later.
     pub fn create(client: &Client, params: CreateSetupIntent<'_>) -> Response<SetupIntent> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/setup_intents", &params)
     }
 
@@ -144,7 +145,7 @@ impl SetupIntent {
     /// When retrieved with a publishable key, only a subset of properties will be returned.
     /// Please refer to the [SetupIntent](https://stripe.com/docs/api#setup_intent_object) object reference for more details.
     pub fn retrieve(client: &Client, id: &SetupIntentId, expand: &[&str]) -> Response<SetupIntent> {
-        client.get_query(&format!("/setup_intents/{}", id), &Expand { expand })
+        client.get_query(&format!("/setup_intents/{}", id), Expand { expand })
     }
 
     /// Updates a SetupIntent object.
@@ -153,6 +154,7 @@ impl SetupIntent {
         id: &SetupIntentId,
         params: UpdateSetupIntent<'_>,
     ) -> Response<SetupIntent> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form(&format!("/setup_intents/{}", id), &params)
     }
 }
@@ -275,8 +277,7 @@ pub struct SetupIntentPaymentMethodOptionsCard {
     /// We strongly recommend that you rely on our SCA Engine to automatically prompt your customers for authentication based on risk level and [other requirements](https://stripe.com/docs/strong-customer-authentication).
     ///
     /// However, if you wish to request 3D Secure based on logic from your own fraud engine, provide this option.
-    /// Permitted values include: `automatic` or `any`.
-    /// If not provided, defaults to `automatic`.
+    /// If not provided, this value defaults to `automatic`.
     /// Read our guide on [manually requesting 3D Secure](https://stripe.com/docs/payments/3d-secure#manual-three-ds) for more information on how this configuration interacts with Radar and our SCA Engine.
     pub request_three_d_secure: Option<SetupIntentPaymentMethodOptionsCardRequestThreeDSecure>,
 }
@@ -385,6 +386,9 @@ pub struct SetupIntentPaymentMethodOptionsUsBankAccount {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub financial_connections: Option<LinkedAccountOptionsUsBankAccount>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mandate_options: Option<PaymentMethodOptionsUsBankAccountMandateOptions>,
+
     /// Bank account verification method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_method: Option<SetupIntentPaymentMethodOptionsUsBankAccountVerificationMethod>,
@@ -401,14 +405,14 @@ pub struct CreateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attach_to_self: Option<bool>,
 
-    /// When enabled, this SetupIntent will accept payment methods that you have enabled in the Dashboard and are compatible with this SetupIntent's other parameters.
+    /// When you enable this parameter, this SetupIntent accepts payment methods that you enable in the Dashboard and that are compatible with its other parameters.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub automatic_payment_methods: Option<CreateSetupIntentAutomaticPaymentMethods>,
 
     /// Set to `true` to attempt to confirm this SetupIntent immediately.
     ///
     /// This parameter defaults to `false`.
-    /// If the payment method attached is a card, a return_url may be provided in case additional authentication is required.
+    /// If a card is the attached payment method, you can provide a `return_url` in case further authentication is necessary.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confirm: Option<bool>,
 
@@ -439,7 +443,7 @@ pub struct CreateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_directions: Option<Vec<CreateSetupIntentFlowDirections>>,
 
-    /// This hash contains details about the Mandate to create.
+    /// This hash contains details about the mandate to create.
     ///
     /// This parameter can only be used with [`confirm=true`](https://stripe.com/docs/api/setup_intents/create#create_setup_intent-confirm).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -453,7 +457,7 @@ pub struct CreateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
-    /// The Stripe account ID for which this SetupIntent is created.
+    /// The Stripe account ID created for this SetupIntent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub on_behalf_of: Option<&'a str>,
 
@@ -461,7 +465,7 @@ pub struct CreateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method: Option<PaymentMethodId>,
 
-    /// The ID of the payment method configuration to use with this Setup Intent.
+    /// The ID of the payment method configuration to use with this SetupIntent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_configuration: Option<PaymentMethodConfigurationId>,
 
@@ -470,25 +474,24 @@ pub struct CreateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_data: Option<CreateSetupIntentPaymentMethodData>,
 
-    /// Payment-method-specific configuration for this SetupIntent.
+    /// Payment method-specific configuration for this SetupIntent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_options: Option<CreateSetupIntentPaymentMethodOptions>,
 
-    /// The list of payment method types (e.g.
+    /// The list of payment method types (for example, card) that this SetupIntent can use.
     ///
-    /// card) that this SetupIntent is allowed to use.
-    /// If this is not provided, defaults to ["card"].
+    /// If you don't provide this, it defaults to ["card"].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_types: Option<Vec<String>>,
 
     /// The URL to redirect your customer back to after they authenticate or cancel their payment on the payment method's app or site.
     ///
-    /// If you'd prefer to redirect to a mobile application, you can alternatively supply an application URI scheme.
+    /// To redirect to a mobile application, you can alternatively supply an application URI scheme.
     /// This parameter can only be used with [`confirm=true`](https://stripe.com/docs/api/setup_intents/create#create_setup_intent-confirm).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_url: Option<&'a str>,
 
-    /// If this hash is populated, this SetupIntent will generate a single_use Mandate on success.
+    /// If you populate this hash, this SetupIntent generates a `single_use` mandate after successful completion.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub single_use: Option<CreateSetupIntentSingleUse>,
 
@@ -560,7 +563,7 @@ pub struct ListSetupIntents<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u64>,
 
-    /// Only return SetupIntents associated with the specified payment method.
+    /// Only return SetupIntents that associate with the specified payment method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method: Option<PaymentMethodId>,
 
@@ -651,14 +654,13 @@ pub struct UpdateSetupIntent<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_data: Option<UpdateSetupIntentPaymentMethodData>,
 
-    /// Payment-method-specific configuration for this SetupIntent.
+    /// Payment method-specific configuration for this SetupIntent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_options: Option<UpdateSetupIntentPaymentMethodOptions>,
 
-    /// The list of payment method types (e.g.
+    /// The list of payment method types (for example, card) that this SetupIntent can set up.
     ///
-    /// card) that this SetupIntent is allowed to set up.
-    /// If this is not provided, defaults to ["card"].
+    /// If you don't provide this array, it defaults to ["card"].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_types: Option<Vec<String>>,
 }
@@ -825,6 +827,10 @@ pub struct CreateSetupIntentPaymentMethodData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub radar_options: Option<CreateSetupIntentPaymentMethodDataRadarOptions>,
 
+    /// If this is a `Revolut Pay` PaymentMethod, this hash contains details about the Revolut Pay payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revolut_pay: Option<CreateSetupIntentPaymentMethodDataRevolutPay>,
+
     /// If this is a `sepa_debit` PaymentMethod, this hash contains details about the SEPA debit bank account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sepa_debit: Option<CreateSetupIntentPaymentMethodDataSepaDebit>,
@@ -832,6 +838,10 @@ pub struct CreateSetupIntentPaymentMethodData {
     /// If this is a `sofort` PaymentMethod, this hash contains details about the SOFORT payment method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sofort: Option<CreateSetupIntentPaymentMethodDataSofort>,
+
+    /// If this is a `swish` PaymentMethod, this hash contains details about the Swish payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub swish: Option<CreateSetupIntentPaymentMethodDataSwish>,
 
     /// The type of the PaymentMethod.
     ///
@@ -1019,6 +1029,10 @@ pub struct UpdateSetupIntentPaymentMethodData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub radar_options: Option<UpdateSetupIntentPaymentMethodDataRadarOptions>,
 
+    /// If this is a `Revolut Pay` PaymentMethod, this hash contains details about the Revolut Pay payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revolut_pay: Option<UpdateSetupIntentPaymentMethodDataRevolutPay>,
+
     /// If this is a `sepa_debit` PaymentMethod, this hash contains details about the SEPA debit bank account.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sepa_debit: Option<UpdateSetupIntentPaymentMethodDataSepaDebit>,
@@ -1026,6 +1040,10 @@ pub struct UpdateSetupIntentPaymentMethodData {
     /// If this is a `sofort` PaymentMethod, this hash contains details about the SOFORT payment method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sofort: Option<UpdateSetupIntentPaymentMethodDataSofort>,
+
+    /// If this is a `swish` PaymentMethod, this hash contains details about the Swish payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub swish: Option<UpdateSetupIntentPaymentMethodDataSwish>,
 
     /// The type of the PaymentMethod.
     ///
@@ -1251,6 +1269,9 @@ pub struct CreateSetupIntentPaymentMethodDataRadarOptions {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodDataRevolutPay {}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CreateSetupIntentPaymentMethodDataSepaDebit {
     /// IBAN of the bank account.
     pub iban: String,
@@ -1261,6 +1282,9 @@ pub struct CreateSetupIntentPaymentMethodDataSofort {
     /// Two-letter ISO code representing the country the bank account is located in.
     pub country: CreateSetupIntentPaymentMethodDataSofortCountry,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodDataSwish {}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CreateSetupIntentPaymentMethodDataUsBankAccount {
@@ -1306,7 +1330,7 @@ pub struct CreateSetupIntentPaymentMethodOptionsAcssDebit {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mandate_options: Option<CreateSetupIntentPaymentMethodOptionsAcssDebitMandateOptions>,
 
-    /// Verification method for the intent.
+    /// Bank account verification method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_method:
         Option<CreateSetupIntentPaymentMethodOptionsAcssDebitVerificationMethod>,
@@ -1335,12 +1359,16 @@ pub struct CreateSetupIntentPaymentMethodOptionsCard {
     /// We strongly recommend that you rely on our SCA Engine to automatically prompt your customers for authentication based on risk level and [other requirements](https://stripe.com/docs/strong-customer-authentication).
     ///
     /// However, if you wish to request 3D Secure based on logic from your own fraud engine, provide this option.
-    /// Permitted values include: `automatic` or `any`.
-    /// If not provided, defaults to `automatic`.
+    /// If not provided, this value defaults to `automatic`.
     /// Read our guide on [manually requesting 3D Secure](https://stripe.com/docs/payments/3d-secure#manual-three-ds) for more information on how this configuration interacts with Radar and our SCA Engine.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_three_d_secure:
         Option<CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure>,
+
+    /// If 3D Secure authentication was performed with a third-party provider,
+    /// the authentication details to use for this setup.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_d_secure: Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecure>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1373,11 +1401,15 @@ pub struct CreateSetupIntentPaymentMethodOptionsUsBankAccount {
     pub financial_connections:
         Option<CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnections>,
 
+    /// Additional fields for Mandate creation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mandate_options: Option<CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions>,
+
     /// Additional fields for network related functions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub networks: Option<CreateSetupIntentPaymentMethodOptionsUsBankAccountNetworks>,
 
-    /// Verification method for the intent.
+    /// Bank account verification method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_method:
         Option<CreateSetupIntentPaymentMethodOptionsUsBankAccountVerificationMethod>,
@@ -1539,6 +1571,9 @@ pub struct UpdateSetupIntentPaymentMethodDataRadarOptions {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodDataRevolutPay {}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdateSetupIntentPaymentMethodDataSepaDebit {
     /// IBAN of the bank account.
     pub iban: String,
@@ -1549,6 +1584,9 @@ pub struct UpdateSetupIntentPaymentMethodDataSofort {
     /// Two-letter ISO code representing the country the bank account is located in.
     pub country: UpdateSetupIntentPaymentMethodDataSofortCountry,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodDataSwish {}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdateSetupIntentPaymentMethodDataUsBankAccount {
@@ -1594,7 +1632,7 @@ pub struct UpdateSetupIntentPaymentMethodOptionsAcssDebit {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mandate_options: Option<UpdateSetupIntentPaymentMethodOptionsAcssDebitMandateOptions>,
 
-    /// Verification method for the intent.
+    /// Bank account verification method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_method:
         Option<UpdateSetupIntentPaymentMethodOptionsAcssDebitVerificationMethod>,
@@ -1623,12 +1661,16 @@ pub struct UpdateSetupIntentPaymentMethodOptionsCard {
     /// We strongly recommend that you rely on our SCA Engine to automatically prompt your customers for authentication based on risk level and [other requirements](https://stripe.com/docs/strong-customer-authentication).
     ///
     /// However, if you wish to request 3D Secure based on logic from your own fraud engine, provide this option.
-    /// Permitted values include: `automatic` or `any`.
-    /// If not provided, defaults to `automatic`.
+    /// If not provided, this value defaults to `automatic`.
     /// Read our guide on [manually requesting 3D Secure](https://stripe.com/docs/payments/3d-secure#manual-three-ds) for more information on how this configuration interacts with Radar and our SCA Engine.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_three_d_secure:
         Option<UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure>,
+
+    /// If 3D Secure authentication was performed with a third-party provider,
+    /// the authentication details to use for this setup.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub three_d_secure: Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecure>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1661,11 +1703,15 @@ pub struct UpdateSetupIntentPaymentMethodOptionsUsBankAccount {
     pub financial_connections:
         Option<UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnections>,
 
+    /// Additional fields for Mandate creation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mandate_options: Option<UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions>,
+
     /// Additional fields for network related functions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub networks: Option<UpdateSetupIntentPaymentMethodOptionsUsBankAccountNetworks>,
 
-    /// Verification method for the intent.
+    /// Bank account verification method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verification_method:
         Option<UpdateSetupIntentPaymentMethodOptionsUsBankAccountVerificationMethod>,
@@ -1810,6 +1856,52 @@ pub struct CreateSetupIntentPaymentMethodOptionsCardMandateOptions {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodOptionsCardThreeDSecure {
+    /// The `transStatus` returned from the card Issuer’s ACS in the ARes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ares_trans_status:
+        Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus>,
+
+    /// The cryptogram, also known as the "authentication value" (AAV, CAVV or
+    /// AEVV).
+    ///
+    /// This value is 20 bytes, base64-encoded into a 28-character string. (Most 3D Secure providers will return the base64-encoded version, which is what you should specify here.).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<String>,
+
+    /// The Electronic Commerce Indicator (ECI) is returned by your 3D Secure
+    /// provider and indicates what degree of authentication was performed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub electronic_commerce_indicator:
+        Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator>,
+
+    /// Network specific 3DS fields.
+    ///
+    /// Network specific arguments require an explicit card brand choice.
+    /// The parameter `payment_method_options.card.network`` must be populated accordingly.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_options:
+        Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptions>,
+
+    /// The challenge indicator (`threeDSRequestorChallengeInd`) which was requested in the
+    /// AReq sent to the card Issuer's ACS.
+    ///
+    /// A string containing 2 digits from 01-99.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requestor_challenge_indicator: Option<String>,
+
+    /// For 3D Secure 1, the XID.
+    ///
+    /// For 3D Secure 2, the Directory Server Transaction ID (dsTransID).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_id: Option<String>,
+
+    /// The version of 3D Secure that was performed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CreateSetupIntentPaymentMethodOptionsSepaDebitMandateOptions {}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1833,6 +1925,14 @@ pub struct CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnection
     /// Upon completing OAuth login in the native browser, the user will be redirected to this URL to return to your app.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions {
+    /// The method used to collect offline mandate customer acceptance.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_method:
+        Option<CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1969,6 +2069,52 @@ pub struct UpdateSetupIntentPaymentMethodOptionsCardMandateOptions {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodOptionsCardThreeDSecure {
+    /// The `transStatus` returned from the card Issuer’s ACS in the ARes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ares_trans_status:
+        Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus>,
+
+    /// The cryptogram, also known as the "authentication value" (AAV, CAVV or
+    /// AEVV).
+    ///
+    /// This value is 20 bytes, base64-encoded into a 28-character string. (Most 3D Secure providers will return the base64-encoded version, which is what you should specify here.).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cryptogram: Option<String>,
+
+    /// The Electronic Commerce Indicator (ECI) is returned by your 3D Secure
+    /// provider and indicates what degree of authentication was performed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub electronic_commerce_indicator:
+        Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator>,
+
+    /// Network specific 3DS fields.
+    ///
+    /// Network specific arguments require an explicit card brand choice.
+    /// The parameter `payment_method_options.card.network`` must be populated accordingly.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_options:
+        Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptions>,
+
+    /// The challenge indicator (`threeDSRequestorChallengeInd`) which was requested in the
+    /// AReq sent to the card Issuer's ACS.
+    ///
+    /// A string containing 2 digits from 01-99.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requestor_challenge_indicator: Option<String>,
+
+    /// For 3D Secure 1, the XID.
+    ///
+    /// For 3D Secure 2, the Directory Server Transaction ID (dsTransID).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_id: Option<String>,
+
+    /// The version of 3D Secure that was performed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdateSetupIntentPaymentMethodOptionsSepaDebitMandateOptions {}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1995,10 +2141,78 @@ pub struct UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnection
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions {
+    /// The method used to collect offline mandate customer acceptance.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_method:
+        Option<UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdateSetupIntentPaymentMethodOptionsUsBankAccountNetworks {
     /// Triggers validations to run across the selected networks.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requested: Option<Vec<UpdateSetupIntentPaymentMethodOptionsUsBankAccountNetworksRequested>>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptions {
+    /// Cartes Bancaires-specific 3DS fields.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cartes_bancaires:
+        Option<CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptions {
+    /// Cartes Bancaires-specific 3DS fields.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cartes_bancaires:
+        Option<UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires {
+    /// The cryptogram calculation algorithm used by the card Issuer's ACS
+    /// to calculate the Authentication cryptogram.
+    ///
+    /// Also known as `cavvAlgorithm`. messageExtension: CB-AVALGO.
+    pub cb_avalgo:
+        CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo,
+
+    /// The exemption indicator returned from Cartes Bancaires in the ARes.
+    /// message extension: CB-EXEMPTION; string (4 characters)
+    /// This is a 3 byte bitmap (low significant byte first and most significant
+    /// bit first) that has been Base64 encoded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cb_exemption: Option<String>,
+
+    /// The risk score returned from Cartes Bancaires in the ARes.
+    /// message extension: CB-SCORE; numeric value 0-99.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cb_score: Option<i64>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires {
+    /// The cryptogram calculation algorithm used by the card Issuer's ACS
+    /// to calculate the Authentication cryptogram.
+    ///
+    /// Also known as `cavvAlgorithm`. messageExtension: CB-AVALGO.
+    pub cb_avalgo:
+        UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo,
+
+    /// The exemption indicator returned from Cartes Bancaires in the ARes.
+    /// message extension: CB-EXEMPTION; string (4 characters)
+    /// This is a 3 byte bitmap (low significant byte first and most significant
+    /// bit first) that has been Base64 encoded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cb_exemption: Option<String>,
+
+    /// The risk score returned from Cartes Bancaires in the ARes.
+    /// message extension: CB-SCORE; numeric value 0-99.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cb_score: Option<i64>,
 }
 
 /// An enum representing the possible values of an `CreateSetupIntentAutomaticPaymentMethods`'s `allow_redirects` field.
@@ -2335,6 +2549,7 @@ pub enum CreateSetupIntentPaymentMethodDataIdealBank {
     Knab,
     Moneyou,
     N26,
+    Nn,
     Rabobank,
     Regiobank,
     Revolut,
@@ -2355,6 +2570,7 @@ impl CreateSetupIntentPaymentMethodDataIdealBank {
             CreateSetupIntentPaymentMethodDataIdealBank::Knab => "knab",
             CreateSetupIntentPaymentMethodDataIdealBank::Moneyou => "moneyou",
             CreateSetupIntentPaymentMethodDataIdealBank::N26 => "n26",
+            CreateSetupIntentPaymentMethodDataIdealBank::Nn => "nn",
             CreateSetupIntentPaymentMethodDataIdealBank::Rabobank => "rabobank",
             CreateSetupIntentPaymentMethodDataIdealBank::Regiobank => "regiobank",
             CreateSetupIntentPaymentMethodDataIdealBank::Revolut => "revolut",
@@ -2411,6 +2627,7 @@ pub enum CreateSetupIntentPaymentMethodDataP24Bank {
     SantanderPrzelew24,
     TmobileUsbugiBankowe,
     ToyotaBank,
+    Velobank,
     VolkswagenBank,
 }
 
@@ -2445,6 +2662,7 @@ impl CreateSetupIntentPaymentMethodDataP24Bank {
                 "tmobile_usbugi_bankowe"
             }
             CreateSetupIntentPaymentMethodDataP24Bank::ToyotaBank => "toyota_bank",
+            CreateSetupIntentPaymentMethodDataP24Bank::Velobank => "velobank",
             CreateSetupIntentPaymentMethodDataP24Bank::VolkswagenBank => "volkswagen_bank",
         }
     }
@@ -2544,8 +2762,10 @@ pub enum CreateSetupIntentPaymentMethodDataType {
     Paypal,
     Pix,
     Promptpay,
+    RevolutPay,
     SepaDebit,
     Sofort,
+    Swish,
     UsBankAccount,
     WechatPay,
     Zip,
@@ -2579,8 +2799,10 @@ impl CreateSetupIntentPaymentMethodDataType {
             CreateSetupIntentPaymentMethodDataType::Paypal => "paypal",
             CreateSetupIntentPaymentMethodDataType::Pix => "pix",
             CreateSetupIntentPaymentMethodDataType::Promptpay => "promptpay",
+            CreateSetupIntentPaymentMethodDataType::RevolutPay => "revolut_pay",
             CreateSetupIntentPaymentMethodDataType::SepaDebit => "sepa_debit",
             CreateSetupIntentPaymentMethodDataType::Sofort => "sofort",
+            CreateSetupIntentPaymentMethodDataType::Swish => "swish",
             CreateSetupIntentPaymentMethodDataType::UsBankAccount => "us_bank_account",
             CreateSetupIntentPaymentMethodDataType::WechatPay => "wechat_pay",
             CreateSetupIntentPaymentMethodDataType::Zip => "zip",
@@ -2995,6 +3217,7 @@ impl std::default::Default for CreateSetupIntentPaymentMethodOptionsCardNetwork 
 pub enum CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
     Any,
     Automatic,
+    Challenge,
 }
 
 impl CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
@@ -3002,6 +3225,7 @@ impl CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
         match self {
             CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Any => "any",
             CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Automatic => "automatic",
+            CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Challenge => "challenge",
         }
     }
 }
@@ -3020,6 +3244,204 @@ impl std::fmt::Display for CreateSetupIntentPaymentMethodOptionsCardRequestThree
 impl std::default::Default for CreateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
     fn default() -> Self {
         Self::Any
+    }
+}
+
+/// An enum representing the possible values of an `CreateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `ares_trans_status` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    #[serde(rename = "A")]
+    A,
+    #[serde(rename = "C")]
+    C,
+    #[serde(rename = "I")]
+    I,
+    #[serde(rename = "N")]
+    N,
+    #[serde(rename = "R")]
+    R,
+    #[serde(rename = "U")]
+    U,
+    #[serde(rename = "Y")]
+    Y,
+}
+
+impl CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::A => "A",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::C => "C",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::I => "I",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::N => "N",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::R => "R",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::U => "U",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::Y => "Y",
+        }
+    }
+}
+
+impl AsRef<str> for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus
+{
+    fn default() -> Self {
+        Self::A
+    }
+}
+
+/// An enum representing the possible values of an `CreateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `electronic_commerce_indicator` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator {
+    #[serde(rename = "01")]
+    V01,
+    #[serde(rename = "02")]
+    V02,
+    #[serde(rename = "05")]
+    V05,
+    #[serde(rename = "06")]
+    V06,
+    #[serde(rename = "07")]
+    V07,
+}
+
+impl CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V01 => "01",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V02 => "02",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V05 => "05",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V06 => "06",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V07 => "07",
+        }
+    }
+}
+
+impl AsRef<str>
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn default() -> Self {
+        Self::V01
+    }
+}
+
+/// An enum representing the possible values of an `CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires`'s `cb_avalgo` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    #[serde(rename = "0")]
+    V0,
+    #[serde(rename = "1")]
+    V1,
+    #[serde(rename = "2")]
+    V2,
+    #[serde(rename = "3")]
+    V3,
+    #[serde(rename = "4")]
+    V4,
+    #[serde(rename = "A")]
+    A,
+}
+
+impl CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V0 => "0",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V1 => "1",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V2 => "2",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V3 => "3",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V4 => "4",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::A => "A",
+        }
+    }
+}
+
+impl AsRef<str>
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn default() -> Self {
+        Self::V0
+    }
+}
+
+/// An enum representing the possible values of an `CreateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `version` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    #[serde(rename = "1.0.2")]
+    V1_0_2,
+    #[serde(rename = "2.1.0")]
+    V2_1_0,
+    #[serde(rename = "2.2.0")]
+    V2_2_0,
+}
+
+impl CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V1_0_2 => "1.0.2",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V2_1_0 => "2.1.0",
+            CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V2_2_0 => "2.2.0",
+        }
+    }
+}
+
+impl AsRef<str> for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for CreateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn default() -> Self {
+        Self::V1_0_2
     }
 }
 
@@ -3072,12 +3494,14 @@ impl std::default::Default
 #[serde(rename_all = "snake_case")]
 pub enum CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch {
     Balances,
+    Transactions,
 }
 
 impl CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch {
     pub fn as_str(self) -> &'static str {
         match self {
             CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch::Balances => "balances",
+            CreateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch::Transactions => "transactions",
         }
     }
 }
@@ -3100,6 +3524,44 @@ impl std::default::Default
 {
     fn default() -> Self {
         Self::Balances
+    }
+}
+
+/// An enum representing the possible values of an `CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions`'s `collection_method` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod {
+    Paper,
+}
+
+impl CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod::Paper => "paper",
+        }
+    }
+}
+
+impl AsRef<str>
+    for CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for CreateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn default() -> Self {
+        Self::Paper
     }
 }
 
@@ -3525,7 +3987,7 @@ impl std::default::Default for SetupIntentPaymentMethodOptionsCardNetwork {
 pub enum SetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
     Any,
     Automatic,
-    ChallengeOnly,
+    Challenge,
 }
 
 impl SetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
@@ -3533,9 +3995,7 @@ impl SetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
         match self {
             SetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Any => "any",
             SetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Automatic => "automatic",
-            SetupIntentPaymentMethodOptionsCardRequestThreeDSecure::ChallengeOnly => {
-                "challenge_only"
-            }
+            SetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Challenge => "challenge",
         }
     }
 }
@@ -4025,6 +4485,7 @@ pub enum UpdateSetupIntentPaymentMethodDataIdealBank {
     Knab,
     Moneyou,
     N26,
+    Nn,
     Rabobank,
     Regiobank,
     Revolut,
@@ -4045,6 +4506,7 @@ impl UpdateSetupIntentPaymentMethodDataIdealBank {
             UpdateSetupIntentPaymentMethodDataIdealBank::Knab => "knab",
             UpdateSetupIntentPaymentMethodDataIdealBank::Moneyou => "moneyou",
             UpdateSetupIntentPaymentMethodDataIdealBank::N26 => "n26",
+            UpdateSetupIntentPaymentMethodDataIdealBank::Nn => "nn",
             UpdateSetupIntentPaymentMethodDataIdealBank::Rabobank => "rabobank",
             UpdateSetupIntentPaymentMethodDataIdealBank::Regiobank => "regiobank",
             UpdateSetupIntentPaymentMethodDataIdealBank::Revolut => "revolut",
@@ -4101,6 +4563,7 @@ pub enum UpdateSetupIntentPaymentMethodDataP24Bank {
     SantanderPrzelew24,
     TmobileUsbugiBankowe,
     ToyotaBank,
+    Velobank,
     VolkswagenBank,
 }
 
@@ -4135,6 +4598,7 @@ impl UpdateSetupIntentPaymentMethodDataP24Bank {
                 "tmobile_usbugi_bankowe"
             }
             UpdateSetupIntentPaymentMethodDataP24Bank::ToyotaBank => "toyota_bank",
+            UpdateSetupIntentPaymentMethodDataP24Bank::Velobank => "velobank",
             UpdateSetupIntentPaymentMethodDataP24Bank::VolkswagenBank => "volkswagen_bank",
         }
     }
@@ -4234,8 +4698,10 @@ pub enum UpdateSetupIntentPaymentMethodDataType {
     Paypal,
     Pix,
     Promptpay,
+    RevolutPay,
     SepaDebit,
     Sofort,
+    Swish,
     UsBankAccount,
     WechatPay,
     Zip,
@@ -4269,8 +4735,10 @@ impl UpdateSetupIntentPaymentMethodDataType {
             UpdateSetupIntentPaymentMethodDataType::Paypal => "paypal",
             UpdateSetupIntentPaymentMethodDataType::Pix => "pix",
             UpdateSetupIntentPaymentMethodDataType::Promptpay => "promptpay",
+            UpdateSetupIntentPaymentMethodDataType::RevolutPay => "revolut_pay",
             UpdateSetupIntentPaymentMethodDataType::SepaDebit => "sepa_debit",
             UpdateSetupIntentPaymentMethodDataType::Sofort => "sofort",
+            UpdateSetupIntentPaymentMethodDataType::Swish => "swish",
             UpdateSetupIntentPaymentMethodDataType::UsBankAccount => "us_bank_account",
             UpdateSetupIntentPaymentMethodDataType::WechatPay => "wechat_pay",
             UpdateSetupIntentPaymentMethodDataType::Zip => "zip",
@@ -4685,6 +5153,7 @@ impl std::default::Default for UpdateSetupIntentPaymentMethodOptionsCardNetwork 
 pub enum UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
     Any,
     Automatic,
+    Challenge,
 }
 
 impl UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
@@ -4692,6 +5161,7 @@ impl UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
         match self {
             UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Any => "any",
             UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Automatic => "automatic",
+            UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure::Challenge => "challenge",
         }
     }
 }
@@ -4710,6 +5180,204 @@ impl std::fmt::Display for UpdateSetupIntentPaymentMethodOptionsCardRequestThree
 impl std::default::Default for UpdateSetupIntentPaymentMethodOptionsCardRequestThreeDSecure {
     fn default() -> Self {
         Self::Any
+    }
+}
+
+/// An enum representing the possible values of an `UpdateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `ares_trans_status` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    #[serde(rename = "A")]
+    A,
+    #[serde(rename = "C")]
+    C,
+    #[serde(rename = "I")]
+    I,
+    #[serde(rename = "N")]
+    N,
+    #[serde(rename = "R")]
+    R,
+    #[serde(rename = "U")]
+    U,
+    #[serde(rename = "Y")]
+    Y,
+}
+
+impl UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::A => "A",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::C => "C",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::I => "I",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::N => "N",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::R => "R",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::U => "U",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus::Y => "Y",
+        }
+    }
+}
+
+impl AsRef<str> for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureAresTransStatus
+{
+    fn default() -> Self {
+        Self::A
+    }
+}
+
+/// An enum representing the possible values of an `UpdateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `electronic_commerce_indicator` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator {
+    #[serde(rename = "01")]
+    V01,
+    #[serde(rename = "02")]
+    V02,
+    #[serde(rename = "05")]
+    V05,
+    #[serde(rename = "06")]
+    V06,
+    #[serde(rename = "07")]
+    V07,
+}
+
+impl UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V01 => "01",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V02 => "02",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V05 => "05",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V06 => "06",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator::V07 => "07",
+        }
+    }
+}
+
+impl AsRef<str>
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureElectronicCommerceIndicator
+{
+    fn default() -> Self {
+        Self::V01
+    }
+}
+
+/// An enum representing the possible values of an `UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancaires`'s `cb_avalgo` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    #[serde(rename = "0")]
+    V0,
+    #[serde(rename = "1")]
+    V1,
+    #[serde(rename = "2")]
+    V2,
+    #[serde(rename = "3")]
+    V3,
+    #[serde(rename = "4")]
+    V4,
+    #[serde(rename = "A")]
+    A,
+}
+
+impl UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V0 => "0",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V1 => "1",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V2 => "2",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V3 => "3",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::V4 => "4",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo::A => "A",
+        }
+    }
+}
+
+impl AsRef<str>
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureNetworkOptionsCartesBancairesCbAvalgo
+{
+    fn default() -> Self {
+        Self::V0
+    }
+}
+
+/// An enum representing the possible values of an `UpdateSetupIntentPaymentMethodOptionsCardThreeDSecure`'s `version` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    #[serde(rename = "1.0.2")]
+    V1_0_2,
+    #[serde(rename = "2.1.0")]
+    V2_1_0,
+    #[serde(rename = "2.2.0")]
+    V2_2_0,
+}
+
+impl UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V1_0_2 => "1.0.2",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V2_1_0 => "2.1.0",
+            UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion::V2_2_0 => "2.2.0",
+        }
+    }
+}
+
+impl AsRef<str> for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for UpdateSetupIntentPaymentMethodOptionsCardThreeDSecureVersion {
+    fn default() -> Self {
+        Self::V1_0_2
     }
 }
 
@@ -4762,12 +5430,14 @@ impl std::default::Default
 #[serde(rename_all = "snake_case")]
 pub enum UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch {
     Balances,
+    Transactions,
 }
 
 impl UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch {
     pub fn as_str(self) -> &'static str {
         match self {
             UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch::Balances => "balances",
+            UpdateSetupIntentPaymentMethodOptionsUsBankAccountFinancialConnectionsPrefetch::Transactions => "transactions",
         }
     }
 }
@@ -4790,6 +5460,44 @@ impl std::default::Default
 {
     fn default() -> Self {
         Self::Balances
+    }
+}
+
+/// An enum representing the possible values of an `UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptions`'s `collection_method` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod {
+    Paper,
+}
+
+impl UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod::Paper => "paper",
+        }
+    }
+}
+
+impl AsRef<str>
+    for UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display
+    for UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default
+    for UpdateSetupIntentPaymentMethodOptionsUsBankAccountMandateOptionsCollectionMethod
+{
+    fn default() -> Self {
+        Self::Paper
     }
 }
 

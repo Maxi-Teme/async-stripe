@@ -36,6 +36,7 @@ impl AccountSession {
 
     /// Creates a AccountSession object that includes a single-use token that the platform can use on their front-end to grant client-side API access.
     pub fn create(client: &Client, params: CreateAccountSession<'_>) -> Response<AccountSession> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/account_sessions", &params)
     }
 }
@@ -51,14 +52,82 @@ impl Object for AccountSession {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ConnectEmbeddedAccountSessionCreateComponents {
 
-    pub account_onboarding: ConnectEmbeddedBaseConfig,
+    pub account_onboarding: ConnectEmbeddedBaseConfigClaim,
+
+    pub payment_details: ConnectEmbeddedPaymentsConfig,
+
+    pub payments: ConnectEmbeddedPaymentsConfig,
+
+    pub payouts: ConnectEmbeddedPayoutsConfig,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct ConnectEmbeddedBaseConfig {
+pub struct ConnectEmbeddedBaseConfigClaim {
 
     /// Whether the embedded component is enabled.
     pub enabled: bool,
+
+    pub features: ConnectEmbeddedBaseFeatures,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConnectEmbeddedBaseFeatures {
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConnectEmbeddedPaymentsConfig {
+
+    /// Whether the embedded component is enabled.
+    pub enabled: bool,
+
+    pub features: ConnectEmbeddedPaymentsFeatures,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConnectEmbeddedPaymentsFeatures {
+
+    /// Whether to allow capturing and cancelling payment intents.
+    ///
+    /// This is `true` by default.
+    pub capture_payments: bool,
+
+    /// Whether to allow responding to disputes, including submitting evidence and accepting disputes.
+    ///
+    /// This is `true` by default.
+    pub dispute_management: bool,
+
+    /// Whether to allow sending refunds.
+    ///
+    /// This is `true` by default.
+    pub refund_management: bool,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConnectEmbeddedPayoutsConfig {
+
+    /// Whether the embedded component is enabled.
+    pub enabled: bool,
+
+    pub features: ConnectEmbeddedPayoutsFeatures,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ConnectEmbeddedPayoutsFeatures {
+
+    /// Whether to allow payout schedule to be changed.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    pub edit_payout_schedule: bool,
+
+    /// Whether to allow creation of instant payouts.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    pub instant_payouts: bool,
+
+    /// Whether to allow creation of standard payouts.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    pub standard_payouts: bool,
 }
 
 /// The parameters for `AccountSession::create`.
@@ -94,6 +163,18 @@ pub struct CreateAccountSessionComponents {
     /// Configuration for the account onboarding embedded component.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_onboarding: Option<CreateAccountSessionComponentsAccountOnboarding>,
+
+    /// Configuration for the payment details embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_details: Option<CreateAccountSessionComponentsPaymentDetails>,
+
+    /// Configuration for the payments embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payments: Option<CreateAccountSessionComponentsPayments>,
+
+    /// Configuration for the payouts embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payouts: Option<CreateAccountSessionComponentsPayouts>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -101,4 +182,111 @@ pub struct CreateAccountSessionComponentsAccountOnboarding {
 
     /// Whether the embedded component is enabled.
     pub enabled: bool,
+
+    /// The list of features enabled in the embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features: Option<CreateAccountSessionComponentsAccountOnboardingFeatures>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPaymentDetails {
+
+    /// Whether the embedded component is enabled.
+    pub enabled: bool,
+
+    /// The list of features enabled in the embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features: Option<CreateAccountSessionComponentsPaymentDetailsFeatures>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPayments {
+
+    /// Whether the embedded component is enabled.
+    pub enabled: bool,
+
+    /// The list of features enabled in the embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features: Option<CreateAccountSessionComponentsPaymentsFeatures>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPayouts {
+
+    /// Whether the embedded component is enabled.
+    pub enabled: bool,
+
+    /// The list of features enabled in the embedded component.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub features: Option<CreateAccountSessionComponentsPayoutsFeatures>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsAccountOnboardingFeatures {
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPaymentDetailsFeatures {
+
+    /// Whether to allow capturing and cancelling payment intents.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_payments: Option<bool>,
+
+    /// Whether to allow responding to disputes, including submitting evidence and accepting disputes.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dispute_management: Option<bool>,
+
+    /// Whether to allow sending refunds.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_management: Option<bool>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPaymentsFeatures {
+
+    /// Whether to allow capturing and cancelling payment intents.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_payments: Option<bool>,
+
+    /// Whether to allow responding to disputes, including submitting evidence and accepting disputes.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dispute_management: Option<bool>,
+
+    /// Whether to allow sending refunds.
+    ///
+    /// This is `true` by default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_management: Option<bool>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateAccountSessionComponentsPayoutsFeatures {
+
+    /// Whether to allow payout schedule to be changed.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edit_payout_schedule: Option<bool>,
+
+    /// Whether to allow creation of instant payouts.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instant_payouts: Option<bool>,
+
+    /// Whether to allow creation of standard payouts.
+    ///
+    /// Default `true` when Stripe owns Loss Liability, default `false` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub standard_payouts: Option<bool>,
 }

@@ -123,7 +123,7 @@ pub struct CreditNote {
 impl CreditNote {
     /// Returns a list of credit notes.
     pub fn list(client: &Client, params: &ListCreditNotes<'_>) -> Response<List<CreditNote>> {
-        client.get_query("/credit_notes", &params)
+        client.get_query("/credit_notes", params)
     }
 
     /// Issue a credit note to adjust the amount of a finalized invoice.
@@ -133,12 +133,13 @@ impl CreditNote {
     /// Instead, it can result in any combination of the following:  <ul> <li>Refund: create a new refund (using `refund_amount`) or link an existing refund (using `refund`).</li> <li>Customer balance credit: credit the customer’s balance (using `credit_amount`) which will be automatically applied to their next invoice when it’s finalized.</li> <li>Outside of Stripe credit: record the amount that is or will be credited outside of Stripe (using `out_of_band_amount`).</li> </ul>  For post-payment credit notes the sum of the refund, credit and outside of Stripe amounts must equal the credit note total.  You may issue multiple credit notes for an invoice.
     /// Each credit note will increment the invoice’s `pre_payment_credit_notes_amount` or `post_payment_credit_notes_amount` depending on its `status` at the time of credit note creation.
     pub fn create(client: &Client, params: CreateCreditNote<'_>) -> Response<CreditNote> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/credit_notes", &params)
     }
 
     /// Retrieves the credit note object with the given identifier.
     pub fn retrieve(client: &Client, id: &CreditNoteId, expand: &[&str]) -> Response<CreditNote> {
-        client.get_query(&format!("/credit_notes/{}", id), &Expand { expand })
+        client.get_query(&format!("/credit_notes/{}", id), Expand { expand })
     }
 
     /// Updates an existing credit note.
@@ -147,6 +148,7 @@ impl CreditNote {
         id: &CreditNoteId,
         params: UpdateCreditNote<'_>,
     ) -> Response<CreditNote> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form(&format!("/credit_notes/{}", id), &params)
     }
 }
@@ -382,9 +384,15 @@ pub struct CreateCreditNoteLines {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quantity: Option<u64>,
 
+    /// A list of up to 10 tax amounts for the credit note line item.
+    ///
+    /// Cannot be mixed with `tax_rates`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_amounts: Option<Vec<CreateCreditNoteLinesTaxAmounts>>,
+
     /// The tax rates which apply to the credit note line item.
     ///
-    /// Only valid when the `type` is `custom_line_item`.
+    /// Only valid when the `type` is `custom_line_item` and cannot be mixed with `tax_amounts`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tax_rates: Option<Vec<String>>,
 
@@ -411,6 +419,20 @@ pub struct CreateCreditNoteShippingCost {
     /// The ID of the shipping rate to use for this order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shipping_rate: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreateCreditNoteLinesTaxAmounts {
+    /// The amount, in cents (or local equivalent), of the tax.
+    pub amount: i64,
+
+    /// The id of the tax rate for this tax amount.
+    ///
+    /// The tax rate must have been automatically created by Stripe.
+    pub tax_rate: String,
+
+    /// The amount on which tax is calculated, in cents (or local equivalent).
+    pub taxable_amount: i64,
 }
 
 /// An enum representing the possible values of an `CreateCreditNoteLines`'s `type` field.

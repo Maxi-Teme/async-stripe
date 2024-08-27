@@ -33,7 +33,7 @@ pub struct PaymentMethodConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub apple_pay: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
-    /// The Connect application associated with this configuration.
+    /// For child configs, the Connect application associated with the configuration.
     pub application: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,6 +61,9 @@ pub struct PaymentMethodConfiguration {
     pub cashapp: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_balance: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub eps: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -76,12 +79,9 @@ pub struct PaymentMethodConfiguration {
     pub grabpay: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id_bank_transfer: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ideal: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
-    /// The default configuration is used whenever no payment method configuration is specified.
+    /// The default configuration is used whenever a payment method configuration is not specified.
     pub is_default: bool,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,14 +99,8 @@ pub struct PaymentMethodConfiguration {
     /// Has the value `true` if the object exists in live mode or the value `false` if the object exists in test mode.
     pub livemode: bool,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub multibanco: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
-
-    /// Configuration name.
+    /// The configuration's name.
     pub name: String,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub netbanking: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oxxo: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
@@ -114,11 +108,8 @@ pub struct PaymentMethodConfiguration {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub p24: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
-    /// The configuration's parent configuration.
+    /// For child configs, the configuration's parent configuration.
     pub parent: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pay_by_bank: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub paynow: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
@@ -130,13 +121,13 @@ pub struct PaymentMethodConfiguration {
     pub promptpay: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub revolut_pay: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sepa_debit: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sofort: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub upi: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub us_bank_account: Option<PaymentMethodConfigResourcePaymentMethodProperties>,
@@ -149,22 +140,24 @@ impl PaymentMethodConfiguration {
 
     /// List payment method configurations.
 pub fn list(client: &Client, params: &ListPaymentMethodConfigurations<'_>) -> Response<List<PaymentMethodConfiguration>> {
-   client.get_query("/payment_method_configurations", &params)
+   client.get_query("/payment_method_configurations", params)
 }
 
 
     /// Creates a payment method configuration.
     pub fn create(client: &Client, params: CreatePaymentMethodConfiguration<'_>) -> Response<PaymentMethodConfiguration> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/payment_method_configurations", &params)
     }
 
     /// Retrieve payment method configuration.
     pub fn retrieve(client: &Client, id: &PaymentMethodConfigurationId, expand: &[&str]) -> Response<PaymentMethodConfiguration> {
-        client.get_query(&format!("/payment_method_configurations/{}", id), &Expand { expand })
+        client.get_query(&format!("/payment_method_configurations/{}", id), Expand { expand })
     }
 
     /// Update payment method configuration.
     pub fn update(client: &Client, id: &PaymentMethodConfigurationId, params: UpdatePaymentMethodConfiguration<'_>) -> Response<PaymentMethodConfiguration> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form(&format!("/payment_method_configurations/{}", id), &params)
     }
 }
@@ -193,9 +186,9 @@ pub struct PaymentMethodConfigResourcePaymentMethodProperties {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PaymentMethodConfigResourceDisplayPreference {
 
-    /// For child configurations, whether or not the account's preference will be observed.
+    /// For child configs, whether or not the account's preference will be observed.
     ///
-    /// If `false`, the parent configuration's preference is used.
+    /// If `false`, the parent configuration's default is used.
     pub overridable: Option<bool>,
 
     /// The account's display preference.
@@ -294,6 +287,13 @@ pub struct CreatePaymentMethodConfiguration<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashapp: Option<CreatePaymentMethodConfigurationCashapp>,
 
+    /// Uses a customer’s [cash balance](https://stripe.com/docs/payments/customer-balance) for the payment.
+    ///
+    /// The cash balance can be funded via a bank transfer.
+    /// Check this [page](https://stripe.com/docs/payments/bank-transfers) for more details.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_balance: Option<CreatePaymentMethodConfigurationCustomerBalance>,
+
     /// EPS is an Austria-based payment method that allows customers to complete transactions online using their bank credentials.
     ///
     /// EPS is supported by all Austrian banks and is accepted by over 80% of Austrian online retailers.
@@ -345,7 +345,7 @@ pub struct CreatePaymentMethodConfiguration<'a> {
 
     /// JCB is a credit card company based in Japan.
     ///
-    /// JCB is currently available in Japan to businesses approved by JCB, and available to all businesses in the US, Canada, Australia, New Zealand, UK, and Ireland.
+    /// JCB is currently available in Japan to businesses approved by JCB, and available to all businesses in Australia, Canada, Hong Kong, Japan, New Zealand, Singapore, Switzerland, United Kingdom, United States, and all countries in the European Economic Area except Iceland.
     /// Check this [page](https://support.stripe.com/questions/accepting-japan-credit-bureau-%28jcb%29-payments) for more details.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jcb: Option<CreatePaymentMethodConfigurationJcb>,
@@ -412,6 +412,12 @@ pub struct CreatePaymentMethodConfiguration<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub promptpay: Option<CreatePaymentMethodConfigurationPromptpay>,
 
+    /// Revolut Pay, developed by Revolut, a global finance app, is a digital wallet payment method.
+    ///
+    /// Revolut Pay uses the customer’s stored balance or cards to fund the payment, and offers the option for non-Revolut customers to save their details after their first purchase.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revolut_pay: Option<CreatePaymentMethodConfigurationRevolutPay>,
+
     /// The [Single Euro Payments Area (SEPA)](https://en.wikipedia.org/wiki/Single_Euro_Payments_Area) is an initiative of the European Union to simplify payments within and across member countries.
     ///
     /// SEPA established and enforced banking standards to allow for the direct debiting of every EUR-denominated bank account within the SEPA region, check this [page](https://stripe.com/docs/payments/sepa-debit) for more details.
@@ -456,6 +462,7 @@ impl<'a> CreatePaymentMethodConfiguration<'a> {
             card: Default::default(),
             cartes_bancaires: Default::default(),
             cashapp: Default::default(),
+            customer_balance: Default::default(),
             eps: Default::default(),
             expand: Default::default(),
             fpx: Default::default(),
@@ -474,6 +481,7 @@ impl<'a> CreatePaymentMethodConfiguration<'a> {
             paynow: Default::default(),
             paypal: Default::default(),
             promptpay: Default::default(),
+            revolut_pay: Default::default(),
             sepa_debit: Default::default(),
             sofort: Default::default(),
             us_bank_account: Default::default(),
@@ -601,6 +609,13 @@ pub struct UpdatePaymentMethodConfiguration<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashapp: Option<UpdatePaymentMethodConfigurationCashapp>,
 
+    /// Uses a customer’s [cash balance](https://stripe.com/docs/payments/customer-balance) for the payment.
+    ///
+    /// The cash balance can be funded via a bank transfer.
+    /// Check this [page](https://stripe.com/docs/payments/bank-transfers) for more details.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_balance: Option<UpdatePaymentMethodConfigurationCustomerBalance>,
+
     /// EPS is an Austria-based payment method that allows customers to complete transactions online using their bank credentials.
     ///
     /// EPS is supported by all Austrian banks and is accepted by over 80% of Austrian online retailers.
@@ -652,7 +667,7 @@ pub struct UpdatePaymentMethodConfiguration<'a> {
 
     /// JCB is a credit card company based in Japan.
     ///
-    /// JCB is currently available in Japan to businesses approved by JCB, and available to all businesses in the US, Canada, Australia, New Zealand, UK, and Ireland.
+    /// JCB is currently available in Japan to businesses approved by JCB, and available to all businesses in Australia, Canada, Hong Kong, Japan, New Zealand, Singapore, Switzerland, United Kingdom, United States, and all countries in the European Economic Area except Iceland.
     /// Check this [page](https://support.stripe.com/questions/accepting-japan-credit-bureau-%28jcb%29-payments) for more details.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jcb: Option<UpdatePaymentMethodConfigurationJcb>,
@@ -713,6 +728,12 @@ pub struct UpdatePaymentMethodConfiguration<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub promptpay: Option<UpdatePaymentMethodConfigurationPromptpay>,
 
+    /// Revolut Pay, developed by Revolut, a global finance app, is a digital wallet payment method.
+    ///
+    /// Revolut Pay uses the customer’s stored balance or cards to fund the payment, and offers the option for non-Revolut customers to save their details after their first purchase.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revolut_pay: Option<UpdatePaymentMethodConfigurationRevolutPay>,
+
     /// The [Single Euro Payments Area (SEPA)](https://en.wikipedia.org/wiki/Single_Euro_Payments_Area) is an initiative of the European Union to simplify payments within and across member countries.
     ///
     /// SEPA established and enforced banking standards to allow for the direct debiting of every EUR-denominated bank account within the SEPA region, check this [page](https://stripe.com/docs/payments/sepa-debit) for more details.
@@ -758,6 +779,7 @@ impl<'a> UpdatePaymentMethodConfiguration<'a> {
             card: Default::default(),
             cartes_bancaires: Default::default(),
             cashapp: Default::default(),
+            customer_balance: Default::default(),
             eps: Default::default(),
             expand: Default::default(),
             fpx: Default::default(),
@@ -775,6 +797,7 @@ impl<'a> UpdatePaymentMethodConfiguration<'a> {
             paynow: Default::default(),
             paypal: Default::default(),
             promptpay: Default::default(),
+            revolut_pay: Default::default(),
             sepa_debit: Default::default(),
             sofort: Default::default(),
             us_bank_account: Default::default(),
@@ -885,6 +908,14 @@ pub struct CreatePaymentMethodConfigurationCashapp {
     /// Whether or not the payment method should be displayed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_preference: Option<CreatePaymentMethodConfigurationCashappDisplayPreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreatePaymentMethodConfigurationCustomerBalance {
+
+    /// Whether or not the payment method should be displayed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_preference: Option<CreatePaymentMethodConfigurationCustomerBalanceDisplayPreference>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1005,6 +1036,14 @@ pub struct CreatePaymentMethodConfigurationPromptpay {
     /// Whether or not the payment method should be displayed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_preference: Option<CreatePaymentMethodConfigurationPromptpayDisplayPreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreatePaymentMethodConfigurationRevolutPay {
+
+    /// Whether or not the payment method should be displayed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_preference: Option<CreatePaymentMethodConfigurationRevolutPayDisplayPreference>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1144,6 +1183,14 @@ pub struct UpdatePaymentMethodConfigurationCashapp {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdatePaymentMethodConfigurationCustomerBalance {
+
+    /// Whether or not the payment method should be displayed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_preference: Option<UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdatePaymentMethodConfigurationEps {
 
     /// Whether or not the payment method should be displayed.
@@ -1261,6 +1308,14 @@ pub struct UpdatePaymentMethodConfigurationPromptpay {
     /// Whether or not the payment method should be displayed.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_preference: Option<UpdatePaymentMethodConfigurationPromptpayDisplayPreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdatePaymentMethodConfigurationRevolutPay {
+
+    /// Whether or not the payment method should be displayed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_preference: Option<UpdatePaymentMethodConfigurationRevolutPayDisplayPreference>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1400,6 +1455,14 @@ pub struct CreatePaymentMethodConfigurationCashappDisplayPreference {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreatePaymentMethodConfigurationCustomerBalanceDisplayPreference {
+
+    /// The account's preference for whether or not to display this payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preference: Option<CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CreatePaymentMethodConfigurationEpsDisplayPreference {
 
     /// The account's preference for whether or not to display this payment method.
@@ -1517,6 +1580,14 @@ pub struct CreatePaymentMethodConfigurationPromptpayDisplayPreference {
     /// The account's preference for whether or not to display this payment method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preference: Option<CreatePaymentMethodConfigurationPromptpayDisplayPreferencePreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CreatePaymentMethodConfigurationRevolutPayDisplayPreference {
+
+    /// The account's preference for whether or not to display this payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preference: Option<CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1656,6 +1727,14 @@ pub struct UpdatePaymentMethodConfigurationCashappDisplayPreference {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreference {
+
+    /// The account's preference for whether or not to display this payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preference: Option<UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct UpdatePaymentMethodConfigurationEpsDisplayPreference {
 
     /// The account's preference for whether or not to display this payment method.
@@ -1773,6 +1852,14 @@ pub struct UpdatePaymentMethodConfigurationPromptpayDisplayPreference {
     /// The account's preference for whether or not to display this payment method.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preference: Option<UpdatePaymentMethodConfigurationPromptpayDisplayPreferencePreference>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UpdatePaymentMethodConfigurationRevolutPayDisplayPreference {
+
+    /// The account's preference for whether or not to display this payment method.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preference: Option<UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -2270,6 +2357,42 @@ impl std::fmt::Display for CreatePaymentMethodConfigurationCashappDisplayPrefere
     }
 }
 impl std::default::Default for CreatePaymentMethodConfigurationCashappDisplayPreferencePreference {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+/// An enum representing the possible values of an `CreatePaymentMethodConfigurationCustomerBalanceDisplayPreference`'s `preference` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    None,
+    Off,
+    On,
+}
+
+impl CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::None => "none",
+            CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::Off => "off",
+            CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::On => "on",
+        }
+    }
+}
+
+impl AsRef<str> for CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for CreatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
     fn default() -> Self {
         Self::None
     }
@@ -2810,6 +2933,42 @@ impl std::fmt::Display for CreatePaymentMethodConfigurationPromptpayDisplayPrefe
     }
 }
 impl std::default::Default for CreatePaymentMethodConfigurationPromptpayDisplayPreferencePreference {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+/// An enum representing the possible values of an `CreatePaymentMethodConfigurationRevolutPayDisplayPreference`'s `preference` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    None,
+    Off,
+    On,
+}
+
+impl CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::None => "none",
+            CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::Off => "off",
+            CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::On => "on",
+        }
+    }
+}
+
+impl AsRef<str> for CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for CreatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
     fn default() -> Self {
         Self::None
     }
@@ -3497,6 +3656,42 @@ impl std::default::Default for UpdatePaymentMethodConfigurationCashappDisplayPre
     }
 }
 
+/// An enum representing the possible values of an `UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreference`'s `preference` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    None,
+    Off,
+    On,
+}
+
+impl UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::None => "none",
+            UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::Off => "off",
+            UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference::On => "on",
+        }
+    }
+}
+
+impl AsRef<str> for UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for UpdatePaymentMethodConfigurationCustomerBalanceDisplayPreferencePreference {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 /// An enum representing the possible values of an `UpdatePaymentMethodConfigurationEpsDisplayPreference`'s `preference` field.
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -4032,6 +4227,42 @@ impl std::fmt::Display for UpdatePaymentMethodConfigurationPromptpayDisplayPrefe
     }
 }
 impl std::default::Default for UpdatePaymentMethodConfigurationPromptpayDisplayPreferencePreference {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+/// An enum representing the possible values of an `UpdatePaymentMethodConfigurationRevolutPayDisplayPreference`'s `preference` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    None,
+    Off,
+    On,
+}
+
+impl UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::None => "none",
+            UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::Off => "off",
+            UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference::On => "on",
+        }
+    }
+}
+
+impl AsRef<str> for UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for UpdatePaymentMethodConfigurationRevolutPayDisplayPreferencePreference {
     fn default() -> Self {
         Self::None
     }

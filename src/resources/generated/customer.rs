@@ -63,9 +63,11 @@ pub struct Customer {
     #[serde(default)]
     pub deleted: bool,
 
-    /// If Stripe bills the customer's latest invoice by automatically charging and the latest charge fails, it sets `delinquent`` to `true``.
+    /// Tracks the most recent state change on any invoice belonging to the customer.
     ///
-    /// If Stripe bills the invoice by sending it, and the invoice isn't paid by the due date, it also sets `delinquent`` to `true`.  If an invoice becomes uncollectible by [dunning](https://stripe.com/docs/billing/automatic-collection), `delinquent` doesn't reset to `false`.
+    /// Paying an invoice or marking it uncollectible via the API will set this field to false.
+    /// An automatic payment failure or passing the `invoice.due_date` will set this field to `true`.  If an invoice becomes uncollectible by [dunning](https://stripe.com/docs/billing/automatic-collection), `delinquent` doesn't reset to `false`.  If you care whether the customer has paid their most recent subscription invoice, use `subscription.status` instead.
+    /// Paying or marking uncollectible any customer invoice regardless of whether it is the latest invoice for a subscription will always set this field to `false`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delinquent: Option<bool>,
 
@@ -137,8 +139,8 @@ pub struct Customer {
     pub sources: List<PaymentSource>,
 
     /// The customer's current subscriptions, if any.
-    #[serde(default)]
-    pub subscriptions: List<Subscription>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subscriptions: Option<List<Subscription>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tax: Option<CustomerTax>,
@@ -150,8 +152,8 @@ pub struct Customer {
     pub tax_exempt: Option<CustomerTaxExempt>,
 
     /// The customer's tax IDs.
-    #[serde(default)]
-    pub tax_ids: List<TaxId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tax_ids: Option<List<TaxId>>,
 
     /// ID of the test clock that this customer belongs to.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -163,17 +165,18 @@ impl Customer {
     ///
     /// The customers are returned sorted by creation date, with the most recent customers appearing first.
     pub fn list(client: &Client, params: &ListCustomers<'_>) -> Response<List<Customer>> {
-        client.get_query("/customers", &params)
+        client.get_query("/customers", params)
     }
 
     /// Creates a new customer object.
     pub fn create(client: &Client, params: CreateCustomer<'_>) -> Response<Customer> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/customers", &params)
     }
 
     /// Retrieves a Customer object.
     pub fn retrieve(client: &Client, id: &CustomerId, expand: &[&str]) -> Response<Customer> {
-        client.get_query(&format!("/customers/{}", id), &Expand { expand })
+        client.get_query(&format!("/customers/{}", id), Expand { expand })
     }
 
     /// Updates the specified customer by setting the values of the parameters passed.
@@ -188,6 +191,7 @@ impl Customer {
         id: &CustomerId,
         params: UpdateCustomer<'_>,
     ) -> Response<Customer> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form(&format!("/customers/{}", id), &params)
     }
 
@@ -632,11 +636,17 @@ pub struct CreateCustomerTax {
     /// We recommend against updating this field more frequently since it could result in unexpected tax location/reporting outcomes.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
+
+    /// A flag that indicates when Stripe should validate the customer tax location.
+    ///
+    /// Defaults to `deferred`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_location: Option<CreateCustomerTaxValidateLocation>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CustomerInvoiceSettings {
-    /// Default custom fields to be displayed on invoices for this customer.
+    /// The list of up to 4 default custom fields to be displayed on invoices for this customer.
     ///
     /// When updating, pass an empty string to remove previously-defined fields.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -694,6 +704,12 @@ pub struct UpdateCustomerTax {
     /// We recommend against updating this field more frequently since it could result in unexpected tax location/reporting outcomes.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
+
+    /// A flag that indicates when Stripe should validate the customer tax location.
+    ///
+    /// Defaults to `deferred`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_location: Option<UpdateCustomerTaxValidateLocation>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -829,6 +845,40 @@ impl std::fmt::Display for CreateCustomerCashBalanceSettingsReconciliationMode {
 impl std::default::Default for CreateCustomerCashBalanceSettingsReconciliationMode {
     fn default() -> Self {
         Self::Automatic
+    }
+}
+
+/// An enum representing the possible values of an `CreateCustomerTax`'s `validate_location` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreateCustomerTaxValidateLocation {
+    Deferred,
+    Immediately,
+}
+
+impl CreateCustomerTaxValidateLocation {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CreateCustomerTaxValidateLocation::Deferred => "deferred",
+            CreateCustomerTaxValidateLocation::Immediately => "immediately",
+        }
+    }
+}
+
+impl AsRef<str> for CreateCustomerTaxValidateLocation {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for CreateCustomerTaxValidateLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for CreateCustomerTaxValidateLocation {
+    fn default() -> Self {
+        Self::Deferred
     }
 }
 
@@ -1213,5 +1263,39 @@ impl std::fmt::Display for UpdateCustomerCashBalanceSettingsReconciliationMode {
 impl std::default::Default for UpdateCustomerCashBalanceSettingsReconciliationMode {
     fn default() -> Self {
         Self::Automatic
+    }
+}
+
+/// An enum representing the possible values of an `UpdateCustomerTax`'s `validate_location` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UpdateCustomerTaxValidateLocation {
+    Deferred,
+    Immediately,
+}
+
+impl UpdateCustomerTaxValidateLocation {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UpdateCustomerTaxValidateLocation::Deferred => "deferred",
+            UpdateCustomerTaxValidateLocation::Immediately => "immediately",
+        }
+    }
+}
+
+impl AsRef<str> for UpdateCustomerTaxValidateLocation {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for UpdateCustomerTaxValidateLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for UpdateCustomerTaxValidateLocation {
+    fn default() -> Self {
+        Self::Deferred
     }
 }

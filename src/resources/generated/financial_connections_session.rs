@@ -50,6 +50,7 @@ impl FinancialConnectionsSession {
     ///
     /// The session’s `client_secret` can be used to launch the flow using Stripe.js.
     pub fn create(client: &Client, params: CreateFinancialConnectionsSession<'_>) -> Response<FinancialConnectionsSession> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/financial_connections/sessions", &params)
     }
 }
@@ -220,6 +221,7 @@ impl std::default::Default for CreateFinancialConnectionsSessionPermissions {
 pub enum CreateFinancialConnectionsSessionPrefetch {
     Balances,
     Ownership,
+    Transactions,
 }
 
 impl CreateFinancialConnectionsSessionPrefetch {
@@ -227,6 +229,7 @@ impl CreateFinancialConnectionsSessionPrefetch {
         match self {
             CreateFinancialConnectionsSessionPrefetch::Balances => "balances",
             CreateFinancialConnectionsSessionPrefetch::Ownership => "ownership",
+            CreateFinancialConnectionsSessionPrefetch::Transactions => "transactions",
         }
     }
 }
@@ -292,6 +295,7 @@ impl std::default::Default for FinancialConnectionsSessionPermissions {
 pub enum FinancialConnectionsSessionPrefetch {
     Balances,
     Ownership,
+    Transactions,
 }
 
 impl FinancialConnectionsSessionPrefetch {
@@ -299,6 +303,7 @@ impl FinancialConnectionsSessionPrefetch {
         match self {
             FinancialConnectionsSessionPrefetch::Balances => "balances",
             FinancialConnectionsSessionPrefetch::Ownership => "ownership",
+            FinancialConnectionsSessionPrefetch::Transactions => "transactions",
         }
     }
 }

@@ -51,6 +51,11 @@ pub struct TaxRate {
     /// It also appears on your customer’s invoice.
     pub jurisdiction: Option<String>,
 
+    /// The level of the jurisdiction that imposes this tax rate.
+    ///
+    /// Will be `null` for manually defined tax rates.
+    pub jurisdiction_level: Option<TaxRateJurisdictionLevel>,
+
     /// Has the value `true` if the object exists in live mode or the value `false` if the object exists in test mode.
     pub livemode: bool,
 
@@ -78,21 +83,23 @@ impl TaxRate {
     ///
     /// Tax rates are returned sorted by creation date, with the most recently created tax rates appearing first.
     pub fn list(client: &Client, params: &ListTaxRates<'_>) -> Response<List<TaxRate>> {
-        client.get_query("/tax_rates", &params)
+        client.get_query("/tax_rates", params)
     }
 
     /// Creates a new tax rate.
     pub fn create(client: &Client, params: CreateTaxRate<'_>) -> Response<TaxRate> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form("/tax_rates", &params)
     }
 
     /// Retrieves a tax rate with the given ID.
     pub fn retrieve(client: &Client, id: &TaxRateId, expand: &[&str]) -> Response<TaxRate> {
-        client.get_query(&format!("/tax_rates/{}", id), &Expand { expand })
+        client.get_query(&format!("/tax_rates/{}", id), Expand { expand })
     }
 
     /// Updates an existing tax rate.
     pub fn update(client: &Client, id: &TaxRateId, params: UpdateTaxRate<'_>) -> Response<TaxRate> {
+        #[allow(clippy::needless_borrows_for_generic_args)]
         client.post_form(&format!("/tax_rates/{}", id), &params)
     }
 }
@@ -308,6 +315,48 @@ impl<'a> UpdateTaxRate<'a> {
             state: Default::default(),
             tax_type: Default::default(),
         }
+    }
+}
+
+/// An enum representing the possible values of an `TaxRate`'s `jurisdiction_level` field.
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TaxRateJurisdictionLevel {
+    City,
+    Country,
+    County,
+    District,
+    Multiple,
+    State,
+}
+
+impl TaxRateJurisdictionLevel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TaxRateJurisdictionLevel::City => "city",
+            TaxRateJurisdictionLevel::Country => "country",
+            TaxRateJurisdictionLevel::County => "county",
+            TaxRateJurisdictionLevel::District => "district",
+            TaxRateJurisdictionLevel::Multiple => "multiple",
+            TaxRateJurisdictionLevel::State => "state",
+        }
+    }
+}
+
+impl AsRef<str> for TaxRateJurisdictionLevel {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for TaxRateJurisdictionLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+impl std::default::Default for TaxRateJurisdictionLevel {
+    fn default() -> Self {
+        Self::City
     }
 }
 

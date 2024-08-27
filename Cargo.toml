@@ -7,9 +7,9 @@ members = [
 
 [package]
 name = "async-stripe"
-version = "0.25.2"
+version = "0.38.1"
 description = "API bindings for the Stripe HTTP API"
-rust-version = "1.68.0"
+rust-version = "1.74.0"
 authors = [
   "Anna Baldwin <abaldwin@developers.wyyerd.com>",
   "Kevin Stenerson <kestred@users.noreply.github.com>",
@@ -43,6 +43,7 @@ full = [
   "terminal",
   "webhook-endpoints",
   "tax-calculation",
+  "products",
 ]
 
 stream = []
@@ -58,6 +59,7 @@ sigma = []
 terminal = []
 webhook-endpoints = []
 tax-calculation = []
+products = []
 
 # deserialize events from webhooks
 webhook-events = ["events", "hmac", "sha2", "chrono", "hex"]
@@ -134,7 +136,7 @@ serde_qs = "0.10.1"
 serde_path_to_error = "0.1.8"
 smol_str = "0.1"
 surf = { version = "2.1", optional = true }
-tokio = { version = "1.2", optional = true }
+tokio = { version = "1", optional = true }
 smart-default = "0.6.0"
 uuid = { version = "0.8", optional=true, features=["v4"] }
 
@@ -152,9 +154,15 @@ rocket = { version = "0.4", optional = true }
 async-std = { version = "1.10.0", features = ["attributes"] }
 httpmock = "0.6.6"
 tokio = { version = "1.24.1", features = ["rt", "macros"] }
-axum = { version = "0.6.18", features = ["macros"] }
+axum = { version = "0.7.4", features = ["macros"] }
 async-trait = "0.1"
 actix-web = "4.2.1"
+
+# MSRV PINS
+#
+# We have a few deps that have MSRVs that are higher than our own. 
+# We pin them here to ensure that we can run tests on the MSRV
+bumpalo = ">=3.0.0, <= 3.15.0"
 
 [[example]]
 name = "checkout"
@@ -182,6 +190,10 @@ required-features = ["async"]
 
 [[example]]
 name = "subscriptions"
+required-features = ["async"]
+
+[[example]]
+name = "test-clocks"
 required-features = ["async"]
 
 [[example]]

@@ -118,6 +118,7 @@ pub struct IssuingCardholderCompany {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct IssuingCardholderIndividual {
     /// Information related to the card_issuing program for this cardholder.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub card_issuing: Option<IssuingCardholderCardIssuing>,
 
     /// The date of birth of this cardholder.
@@ -141,7 +142,9 @@ pub struct IssuingCardholderIndividual {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct IssuingCardholderCardIssuing {
-    /// Information about cardholder acceptance of [Authorized User Terms](https://stripe.com/docs/issuing/cards).
+    /// Information about cardholder acceptance of Celtic [Authorized User Terms](https://stripe.com/docs/issuing/cards#accept-authorized-user-terms).
+    ///
+    /// Required for cards backed by a Celtic program.
     pub user_terms_acceptance: Option<IssuingCardholderUserTermsAcceptance>,
 }
 
@@ -185,13 +188,9 @@ pub struct IssuingCardholderSpendingLimit {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct IssuingCardholderUserTermsAcceptance {
     /// The Unix timestamp marking when the cardholder accepted the Authorized User Terms.
-    ///
-    /// Required for Celtic Spend Card users.
     pub date: Option<Timestamp>,
 
     /// The IP address from which the cardholder accepted the Authorized User Terms.
-    ///
-    /// Required for Celtic Spend Card users.
     pub ip: Option<String>,
 
     /// The user agent of the browser from which the cardholder accepted the Authorized User Terms.
@@ -511,7 +510,6 @@ pub enum IssuingCardholderSpendingLimitCategories {
     HardwareStores,
     HealthAndBeautySpas,
     HearingAidsSalesAndSupplies,
-    #[serde(rename = "heating_plumbing_a_c")]
     HeatingPlumbingAC,
     HobbyToyAndGameShops,
     HomeSupplyWarehouseStores,
@@ -640,7 +638,6 @@ pub enum IssuingCardholderSpendingLimitCategories {
     TruckUtilityTrailerRentals,
     TypesettingPlateMakingAndRelatedServices,
     TypewriterStores,
-    #[serde(rename = "u_s_federal_government_agencies_or_departments")]
     USFederalGovernmentAgenciesOrDepartments,
     UniformsCommercialClothing,
     UsedMerchandiseAndSecondhandStores,
